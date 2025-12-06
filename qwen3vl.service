@@ -1,0 +1,26 @@
+[Unit]
+Description=Qwen3-VL vLLM API Service
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/codes/qwen3vl-on-aws
+Environment="PATH=/home/ubuntu/codes/qwen3vl-on-aws/.venv/bin:/usr/local/bin:/usr/bin:/bin"
+ExecStart=/home/ubuntu/codes/qwen3vl-on-aws/.venv/bin/vllm serve Qwen/Qwen3-VL-8B-Instruct --port 8000 --max-model-len 1024 --gpu-memory-utilization 0.95
+
+# 自动重启配置
+Restart=always
+RestartSec=10
+StartLimitInterval=0
+
+# 资源限制
+LimitNOFILE=65536
+LimitNPROC=65536
+
+# 日志配置
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

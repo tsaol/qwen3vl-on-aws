@@ -112,6 +112,30 @@ print(response.choices[0].message.content)
 bash deploy.sh
 ```
 
+## ⚠️ 高可用部署
+
+**重要提示**：当前的基础部署**不是高可用**，存在以下风险：
+- ❌ 单点故障 - 进程崩溃导致服务中断
+- ❌ 无自动重启 - 需要人工干预
+- ❌ SSH 断开风险 - 可能导致进程终止
+
+### 推荐：安装 systemd 服务
+
+实现自动重启、开机自启、故障恢复：
+
+```bash
+# 安装高可用服务
+sudo bash install_service.sh
+
+# 查看服务状态
+sudo systemctl status qwen3vl
+
+# 查看实时日志
+sudo journalctl -u qwen3vl -f
+```
+
+**完整高可用部署方案**请参考：[HIGH_AVAILABILITY.md](HIGH_AVAILABILITY.md)
+
 ## 加载私有模型
 
 ### 方法 1：使用本地模型路径（推荐）

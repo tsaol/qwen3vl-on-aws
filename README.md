@@ -20,7 +20,31 @@
 
 ## 快速开始
 
-### 1. 安装依赖
+### 方式 1：一键部署（推荐）⭐
+
+使用自动化脚本快速部署：
+
+```bash
+# 1. 克隆仓库
+git clone https://github.com/tsaol/qwen3vl-on-aws.git
+cd qwen3vl-on-aws
+
+# 2. 运行部署脚本（安装依赖和环境）
+bash deploy.sh
+
+# 3. 启动服务
+bash start_server.sh
+```
+
+**就这么简单！** 🎉 服务将在 `http://localhost:8000` 启动。
+
+---
+
+### 方式 2：手动安装（高级用户）
+
+如果你想了解详细步骤或自定义配置：
+
+#### 1. 安装依赖
 
 使用 `uv` 工具（超快的 Python 包管理器）：
 
@@ -41,7 +65,7 @@ source .venv/bin/activate
 uv pip install vllm --torch-backend=auto
 ```
 
-### 2. 启动 vLLM 服务
+#### 2. 启动 vLLM 服务
 
 ```bash
 # 基础启动命令
@@ -51,13 +75,14 @@ vllm serve Qwen/Qwen3-VL-8B-Instruct \
   --gpu-memory-utilization 0.95
 ```
 
-#### 参数说明
-
+**参数说明：**
 - `--port 8000` - API 服务端口
 - `--max-model-len 1024` - 最大序列长度（输入+输出 token 总数）
 - `--gpu-memory-utilization 0.95` - 使用 95% 的 GPU 显存
 
-### 3. 测试 API
+---
+
+### 测试 API
 
 服务启动后，可以通过 OpenAI 兼容的 API 调用：
 
@@ -105,15 +130,6 @@ print(response.choices[0].message.content)
 - ✅ **JavaScript/Node.js** (fetch / OpenAI SDK)
 - ✅ **Go** - HTTP 客户端
 - ✅ 任何支持 OpenAI API 的客户端库
-
-## 使用部署脚本
-
-我们提供了自动化部署脚本：
-
-```bash
-# 一键部署（包含环境设置和服务启动）
-bash deploy.sh
-```
 
 ## ⚠️ 高可用部署
 

@@ -69,6 +69,40 @@ curl http://localhost:8000/v1/chat/completions \
   }'
 ```
 
+## 客户端调用示例
+
+我们提供了多种编程语言的客户端示例，详见 [client_examples.md](client_examples.md)
+
+### 快速开始 - Python 客户端
+
+```python
+# 使用提供的示例脚本
+python3 examples/python_client.py
+
+# 或者使用 OpenAI SDK
+from openai import OpenAI
+
+client = OpenAI(
+    base_url="http://localhost:8000/v1",
+    api_key="EMPTY"
+)
+
+response = client.chat.completions.create(
+    model="Qwen/Qwen3-VL-8B-Instruct",
+    messages=[{"role": "user", "content": "你好"}]
+)
+
+print(response.choices[0].message.content)
+```
+
+### 支持的客户端
+
+- ✅ **cURL** - 命令行测试
+- ✅ **Python** (requests / OpenAI SDK) - [查看示例](examples/)
+- ✅ **JavaScript/Node.js** (fetch / OpenAI SDK)
+- ✅ **Go** - HTTP 客户端
+- ✅ 任何支持 OpenAI API 的客户端库
+
 ## 使用部署脚本
 
 我们提供了自动化部署脚本：

@@ -28,7 +28,7 @@ echo "✅ Python 版本: $(python3.10 --version)"
 if ! command -v uv &> /dev/null; then
     echo "📦 安装 uv 包管理器..."
     curl -LsSf https://astral.sh/uv/install.sh | sh
-    export PATH="$HOME/.cargo/bin:$PATH"
+    export PATH="$HOME/.local/bin:$PATH"
 fi
 
 echo "✅ uv 版本: $(uv --version)"

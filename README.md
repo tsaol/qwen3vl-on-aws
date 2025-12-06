@@ -28,6 +28,9 @@
 # 安装 uv (如果还没安装)
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
+# 更新 PATH（让 shell 能找到 uv）
+source $HOME/.local/bin/env
+
 # 创建虚拟环境 (Python 3.10+)
 uv venv --python 3.10 --seed
 

@@ -16,13 +16,13 @@ echo "✅ 检测到 GPU:"
 nvidia-smi --query-gpu=name,memory.total --format=csv,noheader
 
 # 检查 Python 版本
-if ! command -v python3.12 &> /dev/null; then
-    echo "⚠️  未找到 Python 3.12，尝试安装..."
+if ! command -v python3.10 &> /dev/null; then
+    echo "⚠️  未找到 Python 3.10，尝试安装..."
     sudo apt-get update
-    sudo apt-get install -y python3.12 python3.12-venv
+    sudo apt-get install -y python3.10 python3.10-venv
 fi
 
-echo "✅ Python 版本: $(python3.12 --version)"
+echo "✅ Python 版本: $(python3.10 --version)"
 
 # 安装 uv（如果未安装）
 if ! command -v uv &> /dev/null; then
@@ -35,7 +35,7 @@ echo "✅ uv 版本: $(uv --version)"
 
 # 创建虚拟环境
 echo "🔧 创建 Python 虚拟环境..."
-uv venv --python 3.12 --seed
+uv venv --python 3.10 --seed
 
 # 激活虚拟环境
 echo "🔧 激活虚拟环境..."

@@ -5,7 +5,7 @@
 ## 环境要求
 
 - AWS EC2 实例（推荐 G5 或 P 系列 GPU 实例）
-- Python 3.12
+- Python 3.10+
 - NVIDIA GPU（支持 CUDA）
 - Ubuntu 22.04 或更高版本
 
@@ -28,8 +28,8 @@
 # 安装 uv (如果还没安装)
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# 创建虚拟环境 (Python 3.12)
-uv venv --python 3.12 --seed
+# 创建虚拟环境 (Python 3.10+)
+uv venv --python 3.10 --seed
 
 # 激活虚拟环境
 source .venv/bin/activate
@@ -77,6 +77,76 @@ curl http://localhost:8000/v1/chat/completions \
 # 一键部署（包含环境设置和服务启动）
 bash deploy.sh
 ```
+
+## 加载私有模型
+
+### 方法 1：使用本地模型路径（推荐）
+
+如果模型已下载到本地：
+
+```bash
+# 直接指定本地路径
+MODEL=/path/to/your/private/model bash start_server.sh
+```
+
+或修改 start_server.sh 中的 MODEL 变量：
+```bash
+MODEL="/data/models/my-private-qwen3vl"
+```
+
+### 方法 2：使用 HuggingFace Token（私有仓库）
+
+如果模型在 HuggingFace 私有仓库：
+
+```bash
+# 设置 HuggingFace Token
+export HF_TOKEN="hf_xxxxxxxxxxxxxxxxxxxxx"
+
+# 启动服务
+MODEL=your-org/private-model bash start_server.sh
+```
+
+或使用 huggingface-cli 一次性登录：
+```bash
+pip install huggingface-hub
+huggingface-cli login
+```
+
+### 方法 3：从 S3/云存储加载
+
+```bash
+# 1. 下载模型到本地
+aws s3 sync s3://your-bucket/models/qwen3vl /data/models/qwen3vl
+
+# 2. 使用本地路径启动
+MODEL=/data/models/qwen3vl bash start_server.sh
+```
+
+### 方法 4：使用配置文件
+
+创建 `model_config.env` 文件：
+
+```bash
+# model_config.env
+MODEL_PATH="/data/models/my-private-model"
+HF_TOKEN="hf_xxxxx"  # 如果需要
+PORT=8000
+MAX_MODEL_LEN=1024
+GPU_MEMORY_UTIL=0.95
+```
+
+修改 start_server.sh 加载配置文件：
+```bash
+# 在脚本开头添加
+if [ -f "model_config.env" ]; then
+    source model_config.env
+fi
+```
+
+**安全提醒**：
+- 不要把 Token 提交到 Git 仓库
+- 将 `model_config.env` 添加到 `.gitignore`
+- 生产环境建议使用 AWS Secrets Manager
 
 ## 性能优化建议
 

@@ -4,19 +4,17 @@
 
 ## 环境要求
 
-- AWS EC2 实例（推荐 G5 或 P 系列 GPU 实例）
+- AWS EC2 实例（推荐 G6e 系列 GPU 实例）
 - Python 3.10+
 - NVIDIA GPU（支持 CUDA）
 - Ubuntu 22.04 或更高版本
 
 ## 推荐的 AWS 实例类型
 
-| 实例类型 | GPU | 显存 | 适用场景 |
-|---------|-----|------|---------|
-| g5.xlarge | 1x A10G | 24GB | 小规模测试 |
-| g5.2xlarge | 1x A10G | 24GB | 开发环境 |
-| p3.2xlarge | 1x V100 | 16GB | 训练/推理 |
-| p4d.24xlarge | 8x A100 | 320GB | 大规模生产 |
+| 实例类型 | GPU | 显存 |
+|---------|-----|------|
+| g6e.xlarge | 1x L40S | 48GB | 
+| g6e.2xlarge | 1x L40S | 48GB | 
 
 ## 快速开始
 
@@ -84,7 +82,14 @@ vllm serve Qwen/Qwen3-VL-8B-Instruct \
 
 ### 测试 API
 
-服务启动后，可以通过 OpenAI 兼容的 API 调用：
+服务启动后，使用统一测试脚本：
+
+```bash
+# 交互式选择测试类型
+bash test.sh
+```
+
+或直接用 curl 测试：
 
 ```bash
 curl http://localhost:8000/v1/chat/completions \
@@ -153,7 +158,7 @@ sudo systemctl status qwen3vl
 sudo journalctl -u qwen3vl -f
 ```
 
-**完整高可用部署方案**请参考：[HIGH_AVAILABILITY.md](HIGH_AVAILABILITY.md)
+**完整高可用部署方案**请参考：[GPU_HIGH_AVAILABILITY.md](GPU_HIGH_AVAILABILITY.md)
 
 ## 加载私有模型
 

@@ -36,3 +36,6 @@ Thumbs.db
 
 # HuggingFace 缓存
 .huggingface/
+
+# 图片文件夹
+images/

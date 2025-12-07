@@ -1,0 +1,8 @@
+[project]
+name = "qwen3vl-test"
+version = "0.1.0"
+description = "Qwen3-VL vision analysis test"
+requires-python = ">=3.8"
+dependencies = [
+    "requests>=2.31.0",
+]

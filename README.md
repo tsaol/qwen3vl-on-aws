@@ -230,25 +230,6 @@ fi
 - 将 `model_config.env` 添加到 `.gitignore`
 - 生产环境建议使用 AWS Secrets Manager
 
-## 性能优化建议
-
-### 调整显存使用
-```bash
-# 如果遇到 OOM (Out of Memory)，降低显存利用率
---gpu-memory-utilization 0.8
-```
-
-### 增加最大序列长度
-```bash
-# 处理更长的文本
---max-model-len 4096
-```
-
-### 启用张量并行（多 GPU）
-```bash
-# 在多 GPU 实例上分布模型
---tensor-parallel-size 2  # 使用 2 个 GPU
-```
 
 ## 故障排查
 

@@ -7,7 +7,7 @@
 - AWS EC2 实例（推荐 G6e 系列 GPU 实例）
 - Python 3.10+
 - NVIDIA GPU（支持 CUDA）
-- 选择DeepLearning AMI Ubuntu 22.04 或更高版本, 
+- 选择Deep Learning Base AMI with Single CUDA (Ubuntu) 
 
 ## 推荐的 AWS 实例类型
 

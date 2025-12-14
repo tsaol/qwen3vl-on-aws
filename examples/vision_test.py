@@ -6,12 +6,27 @@ Qwen3-VL 视觉分析测试脚本
 """
 
 import base64
+import os
 from pathlib import Path
 import requests
 
 # 配置
 API_BASE_URL = "https://qwen.xcaoliu.com/v1"
 MODEL_NAME = "Qwen/Qwen3-VL-8B-Instruct"
+
+# API Key 配置（如果启用了认证）
+# 方式 1: 从环境变量读取（推荐）
+API_KEY = os.getenv("QWEN_API_KEY")
+
+# 方式 2: 直接设置（不推荐，仅用于测试）
+# API_KEY = "sk-qwen-xxx"
+
+# 如果没有设置 API Key，提示用户
+if not API_KEY:
+    print("⚠️  警告: 未设置 API Key")
+    print("   如果服务器启用了认证，请求将失败")
+    print("   设置方法: export QWEN_API_KEY='your-api-key'")
+    print()
 
 # 用户配置
 userLoc = 'Chinese'
@@ -100,10 +115,17 @@ Examples:
     }
     
     try:
+        # 构建请求头
+        headers = {"Content-Type": "application/json"}
+
+        # 如果配置了 API Key，添加 Authorization header
+        if API_KEY:
+            headers["Authorization"] = f"Bearer {API_KEY}"
+
         # 调用 API
         response = requests.post(
             f"{API_BASE_URL}/chat/completions",
-            headers={"Content-Type": "application/json"},
+            headers=headers,
             json=payload,
             timeout=60
         )

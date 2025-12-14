@@ -102,6 +102,195 @@ curl http://localhost:8000/v1/chat/completions \
   }'
 ```
 
+---
+
+## 🔒 API Key 认证配置
+
+vLLM 支持原生 API Key 认证，启用后所有 API 请求都需要提供有效的 Bearer Token。
+
+### 为什么需要 API Key？
+
+- ✅ **访问控制** - 防止未授权访问
+- ✅ **成本管理** - 追踪和控制 API 使用量
+- ✅ **安全合规** - 满足生产环境安全要求
+- ✅ **多租户隔离** - 支持不同客户端使用不同密钥
+
+### 启用步骤
+
+#### 1. 生成安全的 API Key
+
+```bash
+# 使用 Python 生成随机密钥
+python3 -c "import secrets; print(f'sk-qwen-{secrets.token_urlsafe(32)}')"
+```
+
+输出示例：`sk-qwen-abc123def456...`
+
+#### 2. 配置 systemd 服务
+
+使用提供的自动化脚本：
+
+```bash
+# 编辑脚本，替换 API_KEY 为你生成的密钥
+nano update-vllm-apikey.sh
+
+# 在两台实例上执行（如果使用多实例部署）
+bash update-vllm-apikey.sh
+```
+
+或手动修改 `/etc/systemd/system/qwen3vl.service`：
+
+```ini
+ExecStart=/path/to/.venv/bin/vllm serve Qwen/Qwen3-VL-8B-Instruct \
+  --port 8000 \
+  --max-model-len 1024 \
+  --gpu-memory-utilization 0.95 \
+  --api-key YOUR_API_KEY_HERE
+```
+
+然后重启服务：
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl restart qwen3vl
+```
+
+#### 3. 验证认证生效
+
+```bash
+# 测试 1: 不带 API Key（应该失败）
+curl -w "\nHTTP: %{http_code}\n" \
+  https://your-domain.com/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{"model": "Qwen/Qwen3-VL-8B-Instruct", "messages": [{"role": "user", "content": "你好"}]}'
+
+# 预期输出：{"error":"Unauthorized"} HTTP: 401
+
+# 测试 2: 带正确的 API Key（应该成功）
+curl https://your-domain.com/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -d '{"model": "Qwen/Qwen3-VL-8B-Instruct", "messages": [{"role": "user", "content": "你好"}]}'
+
+# 预期输出：正常的 JSON 响应
+```
+
+### 客户端使用
+
+#### Python (OpenAI SDK)
+
+```python
+from openai import OpenAI
+
+client = OpenAI(
+    base_url="https://your-domain.com/v1",
+    api_key="YOUR_API_KEY"  # 替换为你的 API Key
+)
+
+response = client.chat.completions.create(
+    model="Qwen/Qwen3-VL-8B-Instruct",
+    messages=[{"role": "user", "content": "你好"}]
+)
+
+print(response.choices[0].message.content)
+```
+
+#### Python (requests)
+
+```python
+import requests
+
+headers = {
+    "Content-Type": "application/json",
+    "Authorization": "Bearer YOUR_API_KEY"
+}
+
+data = {
+    "model": "Qwen/Qwen3-VL-8B-Instruct",
+    "messages": [{"role": "user", "content": "你好"}]
+}
+
+response = requests.post(
+    "https://your-domain.com/v1/chat/completions",
+    headers=headers,
+    json=data
+)
+
+print(response.json())
+```
+
+#### cURL
+
+```bash
+curl https://your-domain.com/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -d '{"model": "Qwen/Qwen3-VL-8B-Instruct", "messages": [...]}'
+```
+
+#### JavaScript/Node.js
+
+```javascript
+const response = await fetch('https://your-domain.com/v1/chat/completions', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer YOUR_API_KEY'
+  },
+  body: JSON.stringify({
+    model: 'Qwen/Qwen3-VL-8B-Instruct',
+    messages: [{role: 'user', content: '你好'}]
+  })
+});
+
+const data = await response.json();
+console.log(data.choices[0].message.content);
+```
+
+### 安全最佳实践
+
+1. **不要硬编码 API Key** - 使用环境变量
+   ```bash
+   export QWEN_API_KEY="sk-qwen-xxx"
+   ```
+
+2. **不要提交到 Git** - 添加到 `.gitignore`
+   ```
+   .env
+   config.yaml
+   *_config.env
+   ```
+
+3. **定期轮换密钥** - 建议每 90 天更新一次
+
+4. **使用不同密钥** - 开发/测试/生产环境分离
+
+5. **启用访问日志** - 监控异常访问模式
+   ```bash
+   sudo journalctl -u qwen3vl -f | grep "Unauthorized"
+   ```
+
+### 常见问题
+
+**Q: 如何禁用 API Key 认证？**
+```bash
+# 移除 --api-key 参数，重启服务
+sudo nano /etc/systemd/system/qwen3vl.service
+sudo systemctl daemon-reload
+sudo systemctl restart qwen3vl
+```
+
+**Q: 支持多个 API Key 吗？**
+vLLM 原生仅支持单个 API Key。如需多密钥管理，建议使用 [LiteLLM Proxy](https://docs.litellm.ai/) 或 Nginx 反向代理。
+
+**Q: 忘记 API Key 怎么办？**
+```bash
+# 查看当前配置的 API Key
+sudo grep "api-key" /etc/systemd/system/qwen3vl.service
+```
+
+---
+
 ## 客户端调用示例
 
 我们提供了多种编程语言的客户端示例，详见 [client_examples.md](client_examples.md)

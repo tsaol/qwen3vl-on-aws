@@ -57,5 +57,4 @@ python -m sglang.launch_server \
     --model-path $MODEL \
     --host $HOST \
     --port $PORT \
-    --mem-fraction-static $MEM_FRACTION_STATIC \
-    --chat-template qwen-vl
+    --mem-fraction-static $MEM_FRACTION_STATIC

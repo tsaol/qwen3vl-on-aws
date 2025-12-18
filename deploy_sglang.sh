@@ -46,9 +46,19 @@ fi
 echo "🔧 激活虚拟环境..."
 source $VENV_DIR/bin/activate
 
+# 设置缓存目录到 NVMe（如果可用）
+NVME_PATH="/opt/dlami/nvme"
+if [ -d "$NVME_PATH" ]; then
+    echo "💾 使用 NVMe 作为缓存目录"
+    export UV_CACHE_DIR="$NVME_PATH/uv_cache"
+    export HF_HOME="$NVME_PATH/huggingface"
+    mkdir -p "$UV_CACHE_DIR" "$HF_HOME"
+fi
+
 # 安装 SGLang
 echo "📦 安装 SGLang（这可能需要几分钟）..."
 echo "安装依赖: flashinfer, sglang[all]"
+echo "缓存目录: $UV_CACHE_DIR"
 uv pip install "sglang[all]" --find-links https://flashinfer.ai/whl/cu124/torch2.4/flashinfer/
 
 # 验证安装

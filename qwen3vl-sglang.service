@@ -10,6 +10,7 @@ Environment="PATH=/home/ubuntu/codes/qwen3vl-on-aws/.venv-sglang/bin:/usr/local/
 Environment="HF_HOME=/opt/dlami/nvme/huggingface"
 Environment="HF_DATASETS_CACHE=/opt/dlami/nvme/huggingface/datasets"
 Environment="TRANSFORMERS_CACHE=/opt/dlami/nvme/huggingface/transformers"
+Environment="SGLANG_DISABLE_CUDNN_CHECK=1"
 ExecStart=/home/ubuntu/codes/qwen3vl-on-aws/.venv-sglang/bin/python -m sglang.launch_server --model-path Qwen/Qwen3-VL-8B-Instruct --host 0.0.0.0 --port 8000 --mem-fraction-static 0.85 --chat-template qwen-vl
 
 # 自动重启配置

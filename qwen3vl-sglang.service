@@ -1,0 +1,29 @@
+[Unit]
+Description=Qwen3-VL SGLang API Service
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/codes/qwen3vl-on-aws
+Environment="PATH=/home/ubuntu/codes/qwen3vl-on-aws/.venv-sglang/bin:/usr/local/bin:/usr/bin:/bin"
+Environment="HF_HOME=/opt/dlami/nvme/huggingface"
+Environment="HF_DATASETS_CACHE=/opt/dlami/nvme/huggingface/datasets"
+Environment="TRANSFORMERS_CACHE=/opt/dlami/nvme/huggingface/transformers"
+ExecStart=/home/ubuntu/codes/qwen3vl-on-aws/.venv-sglang/bin/python -m sglang.launch_server --model-path Qwen/Qwen3-VL-8B-Instruct --host 0.0.0.0 --port 8000 --mem-fraction-static 0.85 --chat-template qwen-vl
+
+# 自动重启配置
+Restart=always
+RestartSec=10
+StartLimitInterval=0
+
+# 资源限制
+LimitNOFILE=65536
+LimitNPROC=65536
+
+# 日志配置
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

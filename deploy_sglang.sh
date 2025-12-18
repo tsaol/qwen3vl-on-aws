@@ -24,14 +24,16 @@ fi
 
 echo "✅ Python 版本: $(python3.10 --version)"
 
+# 确保 uv 在 PATH 中（先设置路径）
+export PATH="$HOME/.local/bin:/root/.local/bin:$PATH"
+
 # 安装 uv（如果未安装）
 if ! command -v uv &> /dev/null; then
     echo "📦 安装 uv 包管理器..."
     curl -LsSf https://astral.sh/uv/install.sh | sh
+    export PATH="$HOME/.local/bin:/root/.local/bin:$PATH"
 fi
 
-# 确保 uv 在 PATH 中
-export PATH="$HOME/.local/bin:$PATH"
 echo "✅ uv 版本: $(uv --version)"
 
 # 创建虚拟环境

@@ -15,7 +15,7 @@
 - **端口**: 8000
 - **最大上下文长度**: 262,144 tokens（自动从模型配置读取）
 - **GPU 显存利用率**: 0.85
-- **API Key 认证**: 暂不支持（可通过 API Gateway 实现）
+- **API Key 认证**: 支持（通过 --api-key 参数）
 
 ##  快速部署
 
@@ -76,6 +76,82 @@ MEM_FRACTION_STATIC="${MEM_FRACTION_STATIC:-0.85}"
 ```
 
 **注意**: SGLang 会自动读取模型配置文件中的 `max_position_embeddings` (262144)，无需手动指定。
+
+##  API Key 认证配置
+
+SGLang 支持原生 API Key 认证，通过 `--api-key` 参数配置。
+
+### 生成 API Key
+
+```bash
+# 生成安全的随机密钥
+python3 -c "import secrets; print(f'sk-sglang-{secrets.token_urlsafe(32)}')"
+```
+
+### 配置方法
+
+#### 方法 1: 修改启动脚本
+
+编辑 `start_server.sh`，添加 API Key 参数：
+
+```bash
+python -m sglang.launch_server \
+    --model-path $MODEL \
+    --host $HOST \
+    --port $PORT \
+    --mem-fraction-static $MEM_FRACTION_STATIC \
+    --api-key YOUR_API_KEY_HERE
+```
+
+#### 方法 2: 修改 systemd 服务
+
+编辑 `/etc/systemd/system/qwen3vl-sglang.service`：
+
+```ini
+ExecStart=/path/to/.venv-sglang/bin/python -m sglang.launch_server \
+    --model-path Qwen/Qwen3-VL-8B-Instruct \
+    --host 0.0.0.0 \
+    --port 8000 \
+    --mem-fraction-static 0.85 \
+    --api-key YOUR_API_KEY_HERE
+```
+
+然后重启服务：
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl restart qwen3vl-sglang
+```
+
+### 客户端使用
+
+配置 API Key 后，所有请求都需要提供 Bearer Token：
+
+```bash
+curl http://localhost:8000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -d '{
+    "model": "Qwen/Qwen3-VL-8B-Instruct",
+    "messages": [{"role": "user", "content": "你好"}]
+  }'
+```
+
+Python 示例：
+
+```python
+from openai import OpenAI
+
+client = OpenAI(
+    base_url="http://localhost:8000/v1",
+    api_key="YOUR_API_KEY"
+)
+
+response = client.chat.completions.create(
+    model="Qwen/Qwen3-VL-8B-Instruct",
+    messages=[{"role": "user", "content": "你好"}]
+)
+```
 
 ##  性能特点
 
@@ -173,7 +249,6 @@ RadixAttention 会自动识别"介绍一下北京"这个共同前缀，
 -  更高的批量推理吞吐量
 -  更成熟稳定的生产环境
 -  更好的高并发支持
--  API Key 认证支持
 
 ##  更多文档
 
@@ -199,10 +274,12 @@ A: SGLang 需要安装额外的优化库：
 
 ### Q: 如何添加 API Key 认证？
 
-A: SGLang 目前不支持原生 API Key 认证。建议使用：
-1. Nginx 反向代理 + Basic Auth
+A: SGLang 支持原生 API Key 认证，通过 `--api-key` 参数配置。详见上方的 [API Key 认证配置](#api-key-认证配置) 章节。
+
+如需更高级的认证管理（多密钥、速率限制等），可以使用：
+1. LiteLLM Proxy（推荐）
 2. AWS API Gateway
-3. LiteLLM Proxy（推荐）
+3. Nginx 反向代理 + Basic Auth
 
 参考 [LiteLLM 方案文档](../docs/LITELLM_HA_SOLUTIONS.md)。
 

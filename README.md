@@ -14,13 +14,12 @@
 | 批量吞吐量 |  最高 |  高 |
 | 多轮对话 |  标准 |  优化 |
 | 长文档/视频 | 需配置 |  原生支持 |
-| API Key 认证 |  原生支持 |  需网关 |
+| API Key 认证 |  原生支持 |  原生支持 |
 | 生产成熟度 |  广泛使用 |  新兴 |
 
 ###  选择 vLLM 如果你需要：
 -  高并发批量推理
 -  成熟稳定的生产环境
--  API Key 认证
 -  更低的显存占用
 
 ###  选择 SGLang 如果你需要：
@@ -198,9 +197,11 @@ response = client.chat.completions.create(
 
 ---
 
-##  API Key 认证（vLLM）
+##  API Key 认证
 
-vLLM 支持原生 API Key 认证：
+vLLM 和 SGLang 都支持原生 API Key 认证。
+
+### vLLM 配置
 
 ```bash
 # 1. 生成密钥
@@ -215,6 +216,24 @@ sudo systemctl restart qwen3vl
 ```
 
 **详细配置**: [vllm/README.md#api-key-配置](vllm/README.md)
+
+### SGLang 配置
+
+SGLang 通过启动参数配置：
+
+```bash
+# 编辑 sglang/start_server.sh，添加 --api-key 参数
+python -m sglang.launch_server \
+    --model-path Qwen/Qwen3-VL-8B-Instruct \
+    --host 0.0.0.0 \
+    --port 8000 \
+    --api-key YOUR_API_KEY
+
+# 重启服务
+sudo systemctl restart qwen3vl-sglang
+```
+
+**详细配置**: [sglang/README.md#api-key-配置](sglang/README.md)
 
 ---
 
@@ -339,7 +358,6 @@ PORT=8001 bash start_server.sh
 **选择 vLLM** 如果：
 - 你需要稳定的生产环境
 - 高并发批量推理是主要场景
-- 需要原生 API Key 认证
 
 **选择 SGLang** 如果：
 - 你在做交互式聊天应用

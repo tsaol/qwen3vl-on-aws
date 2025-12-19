@@ -1,21 +1,21 @@
 # Qwen3-VL 高可用部署指南
 
 当前的基础部署**不是高可用**，存在以下风险：
-- ❌ 单点故障 - 进程崩溃导致服务中断
-- ❌ 无自动重启 - 需要人工干预
-- ❌ SSH 断开风险 - 可能导致进程终止
-- ❌ 无监控告警 - 故障难以及时发现
+-  单点故障 - 进程崩溃导致服务中断
+-  无自动重启 - 需要人工干预
+-  SSH 断开风险 - 可能导致进程终止
+-  无监控告警 - 故障难以及时发现
 
 ---
 
 ## 方案 1：systemd 服务（推荐）⭐
 
 ### 优势
-- ✅ 自动重启 - 进程崩溃后自动恢复
-- ✅ 开机自启 - 系统重启后自动启动
-- ✅ 日志管理 - 统一的日志系统
-- ✅ 进程管理 - 方便的启停控制
-- ✅ 资源限制 - 防止资源耗尽
+-  自动重启 - 进程崩溃后自动恢复
+-  开机自启 - 系统重启后自动启动
+-  日志管理 - 统一的日志系统
+-  进程管理 - 方便的启停控制
+-  资源限制 - 防止资源耗尽
 
 ### 安装步骤
 
@@ -278,10 +278,10 @@ RETRY_DELAY=5
 
 for i in $(seq 1 $MAX_RETRIES); do
     if curl -sf $API_URL > /dev/null; then
-        echo "✅ Service is healthy"
+        echo " Service is healthy"
         exit 0
     else
-        echo "❌ Health check failed (attempt $i/$MAX_RETRIES)"
+        echo " Health check failed (attempt $i/$MAX_RETRIES)"
         if [ $i -lt $MAX_RETRIES ]; then
             sleep $RETRY_DELAY
         fi
@@ -362,6 +362,75 @@ sudo dpkg -i amazon-cloudwatch-agent.deb
    - CloudWatch Alarms
    - SNS 通知
    - 日志聚合
+
+### ALB 健康检查配置 
+
+**重要**：vLLM 的根路径 `/` 返回 404，必须使用正确的健康检查端点！
+
+#### 推荐配置
+
+**Target Group 健康检查设置**：
+```
+Health Check Protocol: HTTP
+Health Check Port: 8000 (traffic-port)
+Health Check Path: /health          ← 关键！不要用 /
+Success Codes: 200
+Health Check Interval: 30 seconds
+Health Check Timeout: 5 seconds
+Healthy Threshold: 5
+Unhealthy Threshold: 2
+```
+
+#### vLLM 可用的健康检查端点
+
+| 端点 | HTTP 状态 | 说明 | 推荐 |
+|------|----------|------|------|
+| `/health` | 200 | 标准健康检查端点 |  推荐 |
+| `/ping` | 200 | SageMaker 兼容端点 |  可选 |
+| `/v1/models` | 200 | API 端点（响应体大） |  不推荐 |
+| `/` | 404 | 根路径不可用 |  不能用 |
+
+#### AWS CLI 配置示例
+
+```bash
+# 修改 Target Group 健康检查路径
+aws elbv2 modify-target-group \
+  --target-group-arn <your-target-group-arn> \
+  --health-check-path /health \
+  --health-check-interval-seconds 30 \
+  --health-check-timeout-seconds 5 \
+  --healthy-threshold-count 5 \
+  --unhealthy-threshold-count 2 \
+  --matcher HttpCode=200 \
+  --region us-west-2
+```
+
+#### 常见问题
+
+**问题**：Target 显示 unhealthy，错误代码 404
+```
+State: unhealthy
+Reason: Target.ResponseCodeMismatch
+Description: Health checks failed with these codes: [404]
+```
+
+**原因**：健康检查路径设置为 `/`，但 vLLM 不提供该路径
+
+**解决**：将健康检查路径改为 `/health`
+
+#### 验证健康检查端点
+
+```bash
+# 测试健康检查端点
+curl -i http://localhost:8000/health
+
+# 预期输出
+HTTP/1.1 200 OK
+(空响应体)
+
+# 查看 OpenAPI 文档了解所有端点
+curl http://localhost:8000/openapi.json | jq '.paths | keys'
+```
 
 ### 成本优化
 
@@ -459,7 +528,7 @@ sudo systemctl start qwen3vl
 
 ## 总结
 
-**当前状态**：❌ 不是高可用，存在宕机风险
+**当前状态**： 不是高可用，存在宕机风险
 
 **建议行动**：
 1. ⚡ 立即使用 screen 或 nohup 防止 SSH 断开

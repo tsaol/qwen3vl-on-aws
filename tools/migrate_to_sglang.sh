@@ -63,7 +63,7 @@ echo "📦 步骤 3: 部署 SGLang..."
 aws ssm send-command \
     --instance-ids $INSTANCE_ID \
     --document-name "AWS-RunShellScript" \
-    --parameters commands=["cd $REMOTE_DIR","git pull || echo 'Git pull failed'","bash deploy_sglang.sh"] \
+    --parameters 'commands=["cd '"$REMOTE_DIR"'","git pull || echo Git_pull_failed","bash deploy_sglang.sh"]' \
     --timeout-seconds 600 \
     --output text \
     --query 'Command.CommandId' > /tmp/cmd_id_3.txt
@@ -109,7 +109,7 @@ echo "🚀 步骤 4: 安装并启动 SGLang 服务..."
 aws ssm send-command \
     --instance-ids $INSTANCE_ID \
     --document-name "AWS-RunShellScript" \
-    --parameters commands=["cd $REMOTE_DIR","bash install_sglang_service.sh"] \
+    --parameters 'commands=["cd '"$REMOTE_DIR"'","bash install_sglang_service.sh"]' \
     --timeout-seconds 60 \
     --output text \
     --query 'Command.CommandId' > /tmp/cmd_id_4.txt

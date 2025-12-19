@@ -77,6 +77,104 @@ MEM_FRACTION_STATIC="${MEM_FRACTION_STATIC:-0.85}"
 
 **注意**: SGLang 会自动读取模型配置文件中的 `max_position_embeddings` (262144)，无需手动指定。
 
+##  高级优化配置（针对 L40S 48GB）
+
+针对 AWS g6e.xlarge (L40S 48GB) 运行 Qwen2.5-VL 多模态模型的优化配置。
+
+### 优化启动命令
+
+```bash
+python -m sglang.launch_server \
+    --model-path Qwen/Qwen2.5-VL-7B-Instruct \
+    --host 0.0.0.0 \
+    --port 8000 \
+    --quantization fp8 \
+    --mm-proj-url Qwen/Qwen2.5-VL-7B-Instruct-mmproj \
+    --attention-backend fa3 \
+    --mem-fraction-static 0.82 \
+    --schedule-policy lpm \
+    --max-total-tokens 8192 \
+    --max-running-requests 48 \
+    --enable-torch-compile \
+    --api-key YOUR_API_KEY
+```
+
+### 参数说明
+
+| 参数 | 值 | 说明 |
+|------|-----|------|
+| `--quantization` | fp8 | FP8 量化，加速视觉塔推理 |
+| `--mm-proj-url` | 模型-mmproj | 视觉投影模块路径（Qwen-VL 专用） |
+| `--attention-backend` | fa3 | FlashAttention 3，更快的注意力计算 |
+| `--mem-fraction-static` | 0.82 | L40S 优化值，预留 18% 给图像特征缓存 |
+| `--schedule-policy` | lpm | 最长前缀匹配调度策略 |
+| `--max-total-tokens` | 8192 | 最大 token 数（支持长上下文） |
+| `--max-running-requests` | 48 | 最大并发请求数 |
+| `--enable-torch-compile` | - | 启用 PyTorch 编译优化 |
+
+### L40S + Qwen-VL 性能预期
+
+| 负载类型 | 预期性能 | 备注 |
+|---------|---------|------|
+| 纯文本 | 180-250 tokens/s | 与文本模型相当 |
+| 单图推理 | 120-160 tokens/s | 视觉编码占 30% 时间 |
+| 多图+长文本 | 80-110 tokens/s | 8K 上下文 |
+
+**L40S 48GB 优势**：
+- 视觉塔 + KV Cache 轻松容纳
+- 支持多图输入和高并发
+- 充足显存支持长上下文推理
+
+### 多模态推理示例
+
+**图像理解**：
+```bash
+curl http://localhost:8000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -d '{
+    "model": "Qwen/Qwen2.5-VL-7B-Instruct",
+    "messages": [{
+      "role": "user",
+      "content": [
+        {
+          "type": "image_url",
+          "image_url": {"url": "https://example.com/image.jpg"}
+        },
+        {
+          "type": "text",
+          "text": "描述这张图片"
+        }
+      ]
+    }]
+  }'
+```
+
+### 性能基准测试
+
+```bash
+# 使用 SGLang 内置基准工具
+python3 -m sglang.bench_serving \
+  --backend sglang \
+  --dataset sharegpt4_vision \
+  --num-prompts 500 \
+  --request-rate 10 \
+  --base-url http://localhost:8000
+```
+
+**预期结果**：
+- 单图推理 TTFT < 1s
+- 吞吐量 > 100 tokens/s
+- GPU 利用率 > 85%
+- 视觉任务延迟远低于 vLLM
+
+### 图像分辨率配置
+
+SGLang 默认支持：
+- 默认分辨率：512x512
+- 支持动态分辨率调整
+- 自动适配输入图像尺寸
+
 ##  API Key 认证配置
 
 SGLang 支持原生 API Key 认证，通过 `--api-key` 参数配置。

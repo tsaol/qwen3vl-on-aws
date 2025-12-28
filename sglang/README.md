@@ -419,6 +419,130 @@ transformers:    11 MB
 总计:          ~1.8 GB
 ```
 
+---
+
+##  EAGLE3 投机解码加速
+
+EAGLE3 (Extrapolative A* Generative Language Engine) 是一种投机解码技术，可以显著提升推理速度。
+
+### 性能提升
+
+| 指标 | 标准模式 | EAGLE3 模式 | 提升 |
+|-----|---------|------------|------|
+| **输出吞吐量** | 389 tok/s | **507 tok/s** | **+30%** |
+| **请求吞吐量** | 9.7 req/s | **12.7 req/s** | **+30%** |
+| **平均延迟** | 1.03s | **0.79s** | **-23%** |
+| **每Token时间** | 24.5ms | **18.2ms** | **-26%** |
+
+### 工作原理
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    EAGLE3 工作流程                       │
+├─────────────────────────────────────────────────────────┤
+│  1. Draft Model (0.4B) 快速生成多个候选 token           │
+│                    ↓                                    │
+│  2. Main Model (8B) 一次性验证所有候选                  │
+│                    ↓                                    │
+│  3. 接受正确的 token，拒绝错误的                        │
+│                    ↓                                    │
+│  4. 平均每步接受 2-3 个 token，实现加速                 │
+└─────────────────────────────────────────────────────────┘
+```
+
+### 前置条件
+
+1. **Draft 模型**: 需要下载专门的 EAGLE3 Draft 模型
+2. **SGLang 版本**: 需要支持 Qwen3-VL EAGLE3 的版本（PR #13918）
+
+### 部署步骤
+
+#### 1. 下载 Draft 模型
+
+```bash
+# 下载 EAGLE3 Draft 模型 (约 1GB)
+huggingface-cli download taobao-mnn/Qwen3-VL-8B-Instruct-Eagle3 \
+    --local-dir /opt/dlami/nvme/models/Qwen3-VL-8B-Instruct-Eagle3
+
+# 或者使用 Python
+python -c "from huggingface_hub import snapshot_download; snapshot_download('taobao-mnn/Qwen3-VL-8B-Instruct-Eagle3', local_dir='/opt/dlami/nvme/models/Qwen3-VL-8B-Instruct-Eagle3')"
+```
+
+#### 2. 安装支持 EAGLE3 的 SGLang
+
+由于 Qwen3-VL EAGLE3 支持正在合并中（PR #13918），需要从 PR 分支安装：
+
+```bash
+# 克隆 PR 分支
+cd /home/ubuntu/codes
+git clone -b qwen3_vl_eagle https://github.com/Lzhang-hub/sglang.git sglang-eagle3
+
+# 安装
+cd sglang-eagle3
+source /path/to/your/venv/bin/activate
+pip install -e python/
+```
+
+> **注意**: 当 PR #13918 合并到主分支后，可以直接使用官方 SGLang 版本。
+
+#### 3. 启动 EAGLE3 模式
+
+```bash
+python -m sglang.launch_server \
+    --model-path /opt/dlami/nvme/models/Qwen3-VL-8B-Instruct \
+    --host 0.0.0.0 \
+    --port 8000 \
+    --mem-fraction-static 0.8 \
+    --trust-remote-code \
+    --speculative-algorithm EAGLE3 \
+    --speculative-draft-model-path /opt/dlami/nvme/models/Qwen3-VL-8B-Instruct-Eagle3 \
+    --speculative-num-steps 3 \
+    --speculative-eagle-topk 6 \
+    --speculative-num-draft-tokens 16
+```
+
+#### 4. 使用启动脚本
+
+```bash
+# 使用 EAGLE3 启动脚本
+bash start_server_eagle3.sh
+```
+
+### EAGLE3 参数说明
+
+| 参数 | 推荐值 | 说明 |
+|------|-------|------|
+| `--speculative-algorithm` | `EAGLE3` | 投机解码算法 |
+| `--speculative-draft-model-path` | 模型路径 | Draft 模型路径 |
+| `--speculative-num-steps` | `3` | 投机步数 |
+| `--speculative-eagle-topk` | `6` | Top-K 候选数 |
+| `--speculative-num-draft-tokens` | `16` | 每步草稿 token 数 |
+
+### EAGLE3 vs 标准模式
+
+| 特性 | 标准模式 | EAGLE3 模式 |
+|-----|---------|------------|
+| 吞吐量 | 基准 | **+30%** |
+| 延迟 | 基准 | **-23%** |
+| 显存占用 | ~18GB | ~19GB (+1GB Draft模型) |
+| TTFT | 更快 | 略慢 (+10ms) |
+| 输出质量 | 基准 | 完全一致 |
+
+### 注意事项
+
+1. **TTFT 略有增加**: EAGLE3 需要同时加载主模型和 Draft 模型，首 Token 时间会略增
+2. **显存占用增加**: Draft 模型额外占用约 1GB 显存
+3. **输出完全一致**: EAGLE3 只是加速，不影响输出质量
+4. **PR 状态**: Qwen3-VL EAGLE3 支持目前在 PR #13918，已获批准待合并
+
+### 相关资源
+
+- **Draft 模型**: [taobao-mnn/Qwen3-VL-8B-Instruct-Eagle3](https://huggingface.co/taobao-mnn/Qwen3-VL-8B-Instruct-Eagle3)
+- **SGLang PR**: [#13918 - support qwen3-vl eagle infer](https://github.com/sgl-project/sglang/pull/13918)
+- **EAGLE3 论文**: [Speculative Decoding with EAGLE](https://arxiv.org/abs/2401.15077)
+
+---
+
 ##  技术支持
 
 - GitHub Issues: https://github.com/tsaol/qwen3vl-on-aws/issues

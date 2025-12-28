@@ -2,20 +2,21 @@
 
 在 AWS 上部署 Qwen3-VL-8B-Instruct 多模态视觉语言模型，支持 **vLLM** 和 **SGLang** 两种推理框架。
 
-##  两种部署方式
+##  三种部署方式
 
-本项目提供两种高性能推理框架，根据你的使用场景选择：
+本项目提供三种高性能推理框架，根据你的使用场景选择：
 
-| 特性 | [vLLM](vllm/) | [SGLang](sglang/) |
-|------|---------------|-------------------|
-| 推理技术 | PagedAttention | RadixAttention |
-| 最大上下文 | 1K-256K (可配置) | 256K (原生支持) |
-| 首 token 延迟 | ~100-200ms | ~50-100ms  |
-| 批量吞吐量 |  最高 |  高 |
-| 多轮对话 |  标准 |  优化 |
-| 长文档/视频 | 需配置 |  原生支持 |
-| API Key 认证 |  原生支持 |  原生支持 |
-| 生产成熟度 |  广泛使用 |  新兴 |
+| 特性 | [vLLM](vllm/) | [SGLang](sglang/) | [SGLang + EAGLE3](sglang/) |
+|------|---------------|-------------------|---------------------------|
+| 推理技术 | PagedAttention | RadixAttention | RadixAttention + 投机解码 |
+| 最大上下文 | 1K-256K (可配置) | 256K (原生支持) | 256K (原生支持) |
+| 首 token 延迟 | ~100-200ms | ~50-100ms  | ~60-110ms |
+| 输出吞吐量 | ~350 tok/s | ~390 tok/s | **~507 tok/s (+30%)** |
+| 批量吞吐量 |  最高 |  高 |  更高 |
+| 多轮对话 |  标准 |  优化 |  优化 |
+| 长文档/视频 | 需配置 |  原生支持 |  原生支持 |
+| API Key 认证 |  原生支持 |  原生支持 |  原生支持 |
+| 生产成熟度 |  广泛使用 |  新兴 |  实验性 |
 
 ###  选择 vLLM 如果你需要：
 -  高并发批量推理
@@ -27,6 +28,12 @@
 -  长文档分析（整本书）
 -  视频理解（小时级视频）
 -  多轮对话优化
+
+###  选择 SGLang + EAGLE3 如果你需要：
+-  **最高吞吐量**（比标准 SGLang 快 30%）
+-  愿意尝试实验性功能
+-  有足够显存容纳 Draft 模型（额外 ~1GB）
+-  可接受略增的首 Token 延迟
 
 ---
 
@@ -99,6 +106,39 @@ sudo systemctl start qwen3vl-sglang
 
 ---
 
+### 方案 C: SGLang + EAGLE3 部署（最高性能）
+
+```bash
+# 1. 克隆仓库
+git clone https://github.com/tsaol/qwen3vl-on-aws.git
+cd qwen3vl-on-aws
+
+# 2. 进入 SGLang 目录
+cd sglang
+
+# 3. 部署 SGLang（需要 10 分钟）
+bash deploy.sh
+
+# 4. 下载 EAGLE3 Draft 模型
+huggingface-cli download taobao-mnn/Qwen3-VL-8B-Instruct-Eagle3 \
+    --local-dir /opt/dlami/nvme/models/Qwen3-VL-8B-Instruct-Eagle3
+
+# 5. 安装支持 EAGLE3 的 SGLang (PR #13918)
+cd /home/ubuntu/codes
+git clone -b qwen3_vl_eagle https://github.com/Lzhang-hub/sglang.git sglang-eagle3
+cd sglang-eagle3
+source ../.venv-sglang/bin/activate
+pip install -e python/
+
+# 6. 启动 EAGLE3 模式
+cd /home/ubuntu/codes/qwen3vl-on-aws/sglang
+bash start_server_eagle3.sh
+```
+
+**完整文档**: [sglang/README.md#eagle3-投机解码加速](sglang/README.md#eagle3-投机解码加速)
+
+---
+
 ##  测试 API
 
 两种部署方式都兼容 OpenAI API 格式：
@@ -134,10 +174,12 @@ qwen3vl-on-aws/
 │   ├── install_service.sh      # 服务安装脚本
 │   └── update_apikey.sh        # API Key 更新脚本
 ├── sglang/                      #  SGLang 部署方式
-│   ├── README.md               # SGLang 详细文档
+│   ├── README.md               # SGLang 详细文档 (含 EAGLE3)
 │   ├── deploy.sh               # 部署脚本
-│   ├── start_server.sh         # 启动脚本
-│   ├── qwen3vl.service         # systemd 服务
+│   ├── start_server.sh         # 标准模式启动脚本
+│   ├── start_server_eagle3.sh  # EAGLE3 模式启动脚本
+│   ├── qwen3vl.service         # 标准模式 systemd 服务
+│   ├── qwen3vl-eagle3.service  # EAGLE3 模式 systemd 服务
 │   └── install_service.sh      # 服务安装脚本
 ├── examples/                    #  客户端示例代码
 │   ├── python_client.py        # Python 基础调用
@@ -292,17 +334,19 @@ cd sglang && bash install_service.sh
 ### 测试环境
 - 实例: g6e.xlarge (NVIDIA L40S 48GB)
 - 模型: Qwen3-VL-8B-Instruct
+- 测试参数: parallel=10, n=100, prompt=700-900 tokens, max_tokens=40
 
 ### 基准测试结果
 
-| 测试场景 | vLLM | SGLang |
-|---------|------|--------|
-| 短对话首 token (ms) | 120 | 65  |
-| 批量推理吞吐 (tokens/s) | 850  | 720 |
-| 多轮对话 (10轮) | 1.2s | 0.8s  |
-| 长文档 (10K tokens) | 配置后可用 | 原生支持  |
-| GPU 显存占用 (1K上下文) | 40GB | 42GB |
-| GPU 显存占用 (256K上下文) | - | 42GB |
+| 测试场景 | vLLM | SGLang | SGLang + EAGLE3 |
+|---------|------|--------|-----------------|
+| 短对话首 token (ms) | 120 | 65  | 79 |
+| 输出吞吐 (tokens/s) | 350  | 389 | **507 (+30%)** |
+| 请求吞吐 (req/s) | 8.8 | 9.7 | **12.7 (+30%)** |
+| 平均延迟 (s) | 1.1 | 1.0 | **0.79 (-23%)** |
+| 多轮对话 (10轮) | 1.2s | 0.8s  | 0.6s |
+| 长文档 (10K tokens) | 配置后可用 | 原生支持  | 原生支持 |
+| GPU 显存占用 | 40GB | 42GB | 43GB (+1GB Draft) |
 
 ---
 

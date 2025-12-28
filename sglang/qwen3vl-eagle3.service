@@ -1,0 +1,31 @@
+[Unit]
+Description=Qwen3-VL SGLang Server with EAGLE3 Speculative Decoding
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/codes/qwen3vl-on-aws/sglang
+Environment="PATH=/home/ubuntu/codes/qwen3vl-on-aws/.venv-sglang/bin:/usr/local/bin:/usr/bin:/bin"
+Environment="HF_HOME=/opt/dlami/nvme/cache/huggingface"
+Environment="TRANSFORMERS_CACHE=/opt/dlami/nvme/cache/huggingface"
+Environment="MODEL_PATH=/opt/dlami/nvme/models/Qwen3-VL-8B-Instruct"
+Environment="DRAFT_MODEL_PATH=/opt/dlami/nvme/models/Qwen3-VL-8B-Instruct-Eagle3"
+
+ExecStart=/home/ubuntu/codes/qwen3vl-on-aws/.venv-sglang/bin/python -m sglang.launch_server \
+    --model-path /opt/dlami/nvme/models/Qwen3-VL-8B-Instruct \
+    --host 0.0.0.0 \
+    --port 8000 \
+    --mem-fraction-static 0.8 \
+    --trust-remote-code \
+    --speculative-algorithm EAGLE3 \
+    --speculative-draft-model-path /opt/dlami/nvme/models/Qwen3-VL-8B-Instruct-Eagle3 \
+    --speculative-num-steps 3 \
+    --speculative-eagle-topk 6 \
+    --speculative-num-draft-tokens 16
+
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
